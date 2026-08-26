@@ -2,76 +2,6 @@
 
 SignRL-Diff is a three-phase training pipeline that produces high-quality sign language videos from text prompts. It combines a video diffusion model with reinforcement learning, using a hierarchical reward system that evaluates body pose quality, temporal coherence, semantic alignment, and hand articulation.
 
-## Architecture
-
-```
-                        SignRL-Diff Architecture
-    ============================================================
-
-    Text Prompt (sentence)
-         |
-         v
-    +------------+     +-----------+     +------------------+
-    | CLIP Text  | --> | Text Emb  | --> | Cross-Attention  |
-    | Encoder    |     | (L, 1024) |     | in UNet          |
-    +------------+     +-----------+     +------------------+
-                                                |
-                                                v
-    +----------------------------------------------------------+
-    |                  Video Diffusion UNet                      |
-    |  +---------+   +--------+   +-----------+   +---------+  |
-    |  | Down    |-->| Middle |-->| Up Blocks |-->| Output  |  |
-    |  | Blocks  |   | Block  |   | (skip)    |   | Head    |  |
-    |  +---------+   +--------+   +-----------+   +---------+  |
-    |  [Spatial Attn | Temporal Attn | Cross Attn + LoRA]       |
-    +----------------------------------------------------------+
-         |                                    |
-         v                                    v
-    +----------+                    +-------------------+
-    | VAE      |                    | Policy Network    |
-    | Encoder  |                    | (per-step RL      |
-    | (pixel   |                    |  corrections)     |
-    |  -> lat) |                    +-------------------+
-    +----------+                             |
-         |                                   v
-         v                          +-------------------+
-    z_0 (clean latent)              | Action a_k        |
-         |                          | [global(64)       |
-         v                          |  hand_L(32)       |
-    +----------+                    |  hand_R(32)       |
-    | VAE      |                    |  scale(1)]        |
-    | Decoder  |                    +-------------------+
-    +----------+                             |
-         |                                   v
-         v                          +-------------------+
-    Video Frames                    | Denoising Env     |
-    (T, 3, 256, 256)                | (MDP per step)    |
-         |                          +-------------------+
-         |                                   |
-         v                                   v
-    +----------------------------------------------------------+
-    |          Hierarchical Articulation-Aware Reward (HAR)      |
-    |                                                            |
-    |  +----------+  +----------+  +----------+  +----------+   |
-    |  | Pose GCN |  | Temp TCN |  | Semantic |  | Hand CNN |   |
-    |  | Stream   |  | Stream   |  | Stream   |  | Stream   |   |
-    |  | (f_pose) |  | (f_temp) |  | (f_sem)  |  | (f_hand) |   |
-    |  +----------+  +----------+  +----------+  +----------+   |
-    |       |              |            |              |         |
-    |       +--------------+------------+--------------+         |
-    |                      |                                     |
-    |                      v                                     |
-    |            +------------------+                            |
-    |            | Fusion MLP       |                            |
-    |            | + MLP_gate       |                            |
-    |            | (dynamic weights)|                            |
-    |            +------------------+                            |
-    |                      |                                     |
-    |                      v                                     |
-    |              Reward in [-1, 1]                             |
-    +----------------------------------------------------------+
-```
-
 ## Three-Phase Training Pipeline
 
 ### Phase 1: Diffusion Pre-training
@@ -98,19 +28,7 @@ Fine-tunes the diffusion model using Proximal Policy Optimization. LoRA adapters
 - **Update**: 4 PPO epochs, mini-batch size 64
 - **Duration**: 200K steps
 
-## Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/signrl-diff/signrl-diff.git
-cd signrl-diff
-
-# Install in development mode
-pip install -e .
-
-# Or install dependencies directly
-pip install -r requirements.txt
-```
 
 ### Requirements
 
